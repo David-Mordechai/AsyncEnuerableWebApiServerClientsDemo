@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
 
 using var client = new HttpClient();
-client.BaseAddress = new Uri("http://localhost:5110");
+client.BaseAddress = new Uri("http://localhost:5182");
 
 var response = await client.GetAsync("WeatherForecast", HttpCompletionOption.ResponseHeadersRead);
 
