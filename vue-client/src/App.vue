@@ -1,39 +1,37 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 
-interface weather {
-  date: Date;
-  temperatureC: Number;
-  temperatureF: Number;
-  summary: String;
+const data = ref<any[]>([]);
+const api = 'http://localhost:5182/WeatherForecast';
+
+const getData = async () => {
+  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined
+  try {
+    let response = await fetch(api)
+    reader = response.body?.getReader();
+    if (!reader) return;
+    const decoder = new TextDecoder();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      var item = decoder.decode(value).replace(/\[|]/g, '').replace(/^,/, '');
+      var parsedItem = JSON.parse(item);
+      data.value.push(parsedItem)
+    }
+  } catch (error) {
+    console.error(error);
+  } finally {
+    reader?.releaseLock();
+  }
 }
-
-const data = ref<weather[]>([]);
-const getData = () => fetch("http://localhost:5182/WeatherForecast").then(async response => {
-  const reader = response.body?.getReader();
-  if (!reader) {
-    return;
-  }
-  const decoder = new TextDecoder();
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    var item = decoder.decode(value).replace(/\[|]/g, '').replace(/^,/, '');
-    var parsedItem: weather = JSON.parse(item) as weather;
-    parsedItem.date = new Date(parsedItem.date)
-
-    data.value.push(parsedItem)
-  }
-  reader.releaseLock();
-});
 
 getData();
 
-function formatDate(date: Date){
+function formatDate(dateString: string) {
+  const date = new Date(dateString)
   const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-based
+  const month = String(date.getMonth() + 1).padStart(2, '0');
   const year = date.getFullYear();
-
   return `${day}/${month}/${year}`;
 }
 
