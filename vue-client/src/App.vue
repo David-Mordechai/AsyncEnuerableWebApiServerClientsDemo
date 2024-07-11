@@ -3,11 +3,16 @@ import { ref } from 'vue';
 
 const data = ref<any[]>([]);
 const api = 'http://localhost:5182/WeatherForecast';
+const abortController = ref<AbortController | null>(null);
 
 const getData = async () => {
-  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined
+  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+  
   try {
-    let response = await fetch(api)
+    abortController.value = new AbortController();
+    const signal = abortController.value.signal;
+
+    let response = await fetch(api, { signal })
     reader = response.body?.getReader();
     if (!reader) return;
     const decoder = new TextDecoder();
@@ -35,10 +40,17 @@ function formatDate(dateString: string) {
   return `${day}/${month}/${year}`;
 }
 
+function cancelFetch() {
+  if (abortController.value) {
+    abortController.value.abort();
+  }
+};
+
 </script>
 
 <template>
   <div class="container">
+    <button @click="cancelFetch">Cancel</button>
     <table>
       <thead>
         <tr>

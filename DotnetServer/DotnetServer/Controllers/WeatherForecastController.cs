@@ -1,4 +1,6 @@
+using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Mvc;
+using static System.Threading.Tasks.Task;
 
 namespace DotnetServer.Controllers
 {
@@ -19,19 +21,25 @@ namespace DotnetServer.Controllers
         }
 
         [HttpGet(Name = "GetWeatherForecast")]
-        public async IAsyncEnumerable<WeatherForecast> Get()
+        public async IAsyncEnumerable<WeatherForecast> Get([EnumeratorCancellation] CancellationToken cancellationToken)
         {
+            cancellationToken.Register(() =>
+            {
+                _logger.LogWarning("Operation was canceled...");
+            });
             for (var index = 0; index < 10; index++)
             {
                 // Simulate an asynchronous delay
-                await Task.Delay(1000);
+                await Delay(1000, cancellationToken);
 
-                yield return new WeatherForecast
+                var item = new WeatherForecast
                 {
                     Date = DateTime.Now.AddDays(index),
                     TemperatureC = Random.Shared.Next(-20, 55),
                     Summary = Summaries[Random.Shared.Next(Summaries.Length)]
                 };
+                _logger.LogInformation("Item was yield to client, index: {index}, item:  {item}", index, item);
+                yield return item;
             }
         }
     }
