@@ -2,14 +2,17 @@
 import { ref } from 'vue';
 
 const data = ref<any[]>([]);
+const fetchningData = ref<boolean>(false);
 const api = 'http://localhost:5182/WeatherForecast';
 const abortController = ref<AbortController | null>(null);
 
-const getData = async () => {
+async function getData() {
   let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
-  
+  data.value = [];
+  fetchningData.value = true;
+  abortController.value = new AbortController();
+
   try {
-    abortController.value = new AbortController();
     const signal = abortController.value.signal;
 
     let response = await fetch(api, { signal })
@@ -23,14 +26,17 @@ const getData = async () => {
       var parsedItem = JSON.parse(item);
       data.value.push(parsedItem)
     }
-  } catch (error) {
-    console.error(error);
+  } catch (error: any) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      console.log('Fetch aborted');
+    } else {
+      console.error('Fetch error:', error);
+    }
   } finally {
     reader?.releaseLock();
+    fetchningData.value = false;
   }
 }
-
-getData();
 
 function formatDate(dateString: string) {
   const date = new Date(dateString)
@@ -45,14 +51,22 @@ function cancelFetch() {
     abortController.value.abort();
   }
 };
-
 </script>
 
 <template>
   <div class="container">
-    <button @click="cancelFetch">Cancel</button>
-    <table>
+    <div style="padding: 10px;">
+      <v-btn v-if="fetchningData === false" @click="getData" color="primary">Fetch Data</v-btn>
+      <v-btn v-if="fetchningData" @click="cancelFetch" color="error">Cancel</v-btn>
+    </div>
+    <v-table>
       <thead>
+        <tr>
+          <th colspan="4" style="height: 6px; padding: 0;">
+            <v-progress-linear v-if="fetchningData" color="primary" height="3" indeterminate rounded>
+            </v-progress-linear>
+          </th>
+        </tr>
         <tr>
           <th>Date</th>
           <th>TemperatureC</th>
@@ -68,7 +82,7 @@ function cancelFetch() {
           <td>{{ item.summary }}</td>
         </tr>
       </tbody>
-    </table>
+    </v-table>
   </div>
 </template>
 
@@ -80,5 +94,9 @@ function cancelFetch() {
 th {
   width: 200px;
   text-align: left;
+}
+
+button{
+  width: 120px;
 }
 </style>
